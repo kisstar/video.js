@@ -79,7 +79,10 @@ export function getMiddleware(type) {
  * @param  {Function}
  *         The next middleware to run.
  */
+// 通过递归任何匹配的中间件并在每个中间件上调用“setSource”，
+// 每次传递之前返回的值，从而使用中间件异步设置源。
 export function setSource(player, src, next) {
+  console.log(middlewares);
   player.setTimeout(() => setSourceHelper(src, middlewares[src.type], next, player), 1);
 }
 
@@ -282,6 +285,7 @@ function getOrCreateFactory(player, mwFactory) {
   return mw;
 }
 
+// src middlewares[src.type] callback palyer
 function setSourceHelper(src = {}, middleware = [], next, player, acc = [], lastRun = false) {
   const [mwFactory, ...mwrest] = middleware;
 

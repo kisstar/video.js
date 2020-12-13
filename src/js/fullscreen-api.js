@@ -12,6 +12,7 @@ import document from 'global/document';
  * @see [Specification]{@link https://fullscreen.spec.whatwg.org}
  * @see [Map Approach From Screenfull.js]{@link https://github.com/sindresorhus/screenfull.js}
  */
+// 为全屏API存储特定于浏览器的方法
 const FullscreenApi = {
   prefixed: true
 };

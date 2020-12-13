@@ -155,6 +155,7 @@ function videojs(id, options, ready) {
 
   options = options || {};
 
+  // 最新的配置传递给 beforesetup 中的钩子，并将返回值和当前配置合并，然后依次执行后
   videojs.hooks('beforesetup').forEach((hookFunction) => {
     const opts = hookFunction(el, mergeOptions(options));
 

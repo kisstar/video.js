@@ -1283,6 +1283,8 @@ Html5.patchCanPlayType = function() {
 
   // Android 4.0 and above can play HLS to some extent but it reports being unable to do so
   // Firefox and Chrome report correctly
+  // android4.0及以上版本在一定程度上可以播放HLS，但据报道无法做到
+  // Firefox和Chrome报告正确
   if (browser.ANDROID_VERSION >= 4.0 && !browser.IS_FIREFOX && !browser.IS_CHROME) {
     canPlayType = Html5.TEST_VID && Html5.TEST_VID.constructor.prototype.canPlayType;
     Html5.TEST_VID.constructor.prototype.canPlayType = function(type) {

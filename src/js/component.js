@@ -66,14 +66,17 @@ class Component {
     this.parentComponent_ = null;
 
     // Make a copy of prototype.options_ to protect against overriding defaults
+    // 获取原型上的默认配置
     this.options_ = mergeOptions({}, this.options_);
 
     // Updated options with supplied options
+    // 将原型上的配置和拿到的配置进行合并，拿到的配置优先级更高
     options = this.options_ = mergeOptions(this.options_, options);
 
     // Get ID from options or options element if one is supplied
     this.id_ = options.id || (options.el && options.el.id);
 
+    // 为什么要确保有个 ID？
     // If there was no ID from the options, generate one
     if (!this.id_) {
       // Don't require the player ID function in the case of mock players
@@ -88,7 +91,7 @@ class Component {
     if (options.el) {
       this.el_ = options.el;
     } else if (options.createEl !== false) {
-      this.el_ = this.createEl();
+      this.el_ = this.createEl(); // 默认会创建一个 div 元素
     }
 
     // if evented is anything except false, we want to mixin in evented
@@ -96,7 +99,7 @@ class Component {
       // Make this an evented object and use `el_`, if available, as its event bus
       evented(this, {eventBusKey: this.el_ ? 'el_' : null});
 
-      this.handleLanguagechange = this.handleLanguagechange.bind(this);
+      this.handleLanguagechange = this.handleLanguagechange.bind(this); // 处理语言更换，需要在子级重写
       this.on(this.player_, 'languagechange', this.handleLanguagechange);
     }
     stateful(this, this.constructor.defaultState);
@@ -337,6 +340,7 @@ class Component {
    * @return {Element}
    *         The content element for this `Component`.
    */
+  // 返回 `Component` 的DOM元素。children 在这里被插入
   contentEl() {
     return this.contentEl_ || this.el_;
   }
@@ -459,6 +463,8 @@ class Component {
     if (typeof child === 'string') {
       componentName = toTitleCase(child);
 
+      // 可以通过 componentClass 指定组件的名称
+      // 添加同样的组件时可以取不同的 name 相同的 componentClass
       const componentClassName = options.componentClass || componentName;
 
       // Set name through options
@@ -508,6 +514,7 @@ class Component {
 
     // Add the UI object's element to the container div (box)
     // Having an element is not required
+    // 将UI对象的元素添加到容器div（box）中，不需要有元素
     if (typeof component.el === 'function' && component.el()) {
       // If inserting before a component, insert before that component's element
       let refNode = null;
@@ -588,6 +595,7 @@ class Component {
         // Allow options for children to be set at the parent options
         // e.g. videojs(id, { controlBar: false });
         // instead of videojs(id, { children: { controlBar: false });
+        // 允许在父级设置配置，而且优先级更高，直接覆盖而不是合并
         if (parentOptions[name] !== undefined) {
           opts = parentOptions[name];
         }
@@ -607,6 +615,7 @@ class Component {
         // We also want to pass the original player options
         // to each component as well so they don't need to
         // reach back into the player for options later.
+        // 我们还希望将原始的播放器选项传递给每个组件，这样它们就不需要在以后回到播放器中获取选项。
         opts.playerOptions = this.options_.playerOptions;
 
         // Create and add the child component.
@@ -625,14 +634,22 @@ class Component {
       const Tech = Component.getComponent('Tech');
 
       if (Array.isArray(children)) {
+        /*
+        children: ['', {name: '', ...res}]，字符串为名称没有配置，对象的情况name字段为名称，整体对象为配置
+        */
         workingChildren = children;
       } else {
+        /*
+        children: { key: {}}，key 为名称，值为配置,this.options_ 中的项和此一致
+        */
         workingChildren = Object.keys(children);
       }
 
       workingChildren
       // children that are in this.options_ but also in workingChildren  would
       // give us extra children we do not want. So, we want to filter them out.
+      // children 也可以在 this.options_ 中配置，比如 controlBar，所以我们需要将 this.options_ 的属性也添加到workingChildren中
+      // 但是此时this.options_的孩子也可能在workingChildren中，这会给我们更多我们不想要的孩子。所以，我们要过滤掉它们。
         .concat(Object.keys(this.options_)
           .filter(function(child) {
             return !workingChildren.some(function(wchild) {
@@ -642,6 +659,8 @@ class Component {
               return child === wchild.name;
             });
           }))
+      // 现在我们的数组中有字符串，也有对象
+      // 接着我们对剩余的项目进行处理，返回 {name: '', opts: {}} 数组
         .map((child) => {
           let name;
           let opts;
@@ -657,9 +676,10 @@ class Component {
           return {name, opts};
         })
         .filter((child) => {
-        // we have to make sure that child.name isn't in the techOrder since
-        // techs are registerd as Components but can't aren't compatible
-        // See https://github.com/videojs/video.js/issues/2772
+          // we have to make sure that child.name isn't in the techOrder since
+          // techs are registerd as Components but can't aren't compatible
+          // See https://github.com/videojs/video.js/issues/2772
+          // 我们必须确保子级名称不在techOrder中，因为techs注册为组件，但不兼容
           const c = Component.getComponent(child.opts.componentClass ||
                                        toTitleCase(child.name));
 
@@ -1302,6 +1322,7 @@ class Component {
    */
   enableTouchActivity() {
     // Don't continue if the root player doesn't support reporting user activity
+    // 如果根播放器不支持报告用户活动，则不要继续
     if (!this.player() || !this.player().reportUserActivity) {
       return;
     }
@@ -1316,6 +1337,9 @@ class Component {
       // For as long as the they are touching the device or have their mouse down,
       // we consider them active even if they're not moving their finger or mouse.
       // So we want to continue to update that they are active
+      // 只要他们触摸设备或按下鼠标，
+      // 我们认为它们是活跃的，即使它们不动手指或鼠标。
+      // 所以我们想继续更新他们是活跃的
       this.clearInterval(touchHolding);
       // report at the same interval as activityCheck
       touchHolding = this.setInterval(report, 250);
@@ -1323,6 +1347,7 @@ class Component {
 
     const touchEnd = function(event) {
       report();
+      // 如果触摸保持不变，停止保持活动的间隔
       // stop the interval that maintains activity if the touch is holding
       this.clearInterval(touchHolding);
     };
@@ -1345,7 +1370,9 @@ class Component {
    * instead though:
    * 1. It gets cleared via  {@link Component#clearTimeout} when
    *    {@link Component#dispose} gets called.
+   * 当调用{@link Component#dispose}时，它通过{@link Component#clearTimeout}清除
    * 2. The function callback will gets turned into a {@link Component~GenericCallback}
+   * 函数回调将变成{@link Component~GenericCallback}
    *
    * > Note: You can't use `window.clearTimeout` on the id returned by this function. This
    *         will cause its dispose listener not to get cleaned up! Please use

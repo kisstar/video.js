@@ -33,6 +33,7 @@ function _cleanUpEvents(elem, type) {
     delete data.handlers[type];
     // data.handlers[type] = null;
     // Setting to null was causing an error with data.handlers
+    // 设置为null导致出现错误数据处理程序?
 
     // Remove the meta-handler from the element
     if (elem.removeEventListener) {
@@ -257,6 +258,14 @@ const passiveEvents = [
  * @param {EventTarget~EventListener} fn
  *        Event listener.
  */
+// 向元素添加事件侦听器
+// 它将处理程序函数存储在单独的缓存对象中
+// 并将泛型处理程序添加到元素的事件中
+// 与元素的唯一id一起
+
+// handlers
+// dispatcher
+// disabled
 export function on(elem, type, fn) {
   if (Array.isArray(type)) {
     return _handleMultipleEvents(on, elem, type, fn);
@@ -286,12 +295,16 @@ export function on(elem, type, fn) {
   if (!data.dispatcher) {
     data.disabled = false;
 
+    // 抹平 stopImmediatePropagation 和 isImmediatePropagationStopped 方法
+    // 遍历执行 handlers 下 event.type 事件
     data.dispatcher = function(event, hash) {
 
       if (data.disabled) {
         return;
       }
 
+      // 修复本机事件以使其具有标准属性值
+      // 也就是消除一些事件对象的差异
       event = fixEvent(event);
 
       const handlers = data.handlers[event.type];
@@ -315,12 +328,17 @@ export function on(elem, type, fn) {
     };
   }
 
+  // 第一次时将事件绑定在 DOM 上，比如点击事件
+  // 后续其它同类事件就会交给 dispatcher 方法来执行
+  // 其它非 DOM 事件呢？
   if (data.handlers[type].length === 1) {
     if (elem.addEventListener) {
       let options = false;
 
       if (supportsPassive() &&
         passiveEvents.indexOf(type) > -1) {
+        // 设置为true时，表示 listener 永远不会调用 preventDefault()。
+        // 如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告
         options = {passive: true};
       }
       elem.addEventListener(type, data.dispatcher, options);
@@ -363,6 +381,8 @@ export function off(elem, type, fn) {
   // Utility function
   const removeType = function(el, t) {
     data.handlers[t] = [];
+    // 如果某个类型的事件为零时移除监听的事件 data.dispatcher
+    // 如果所有类型都没了就 delete data.handlers data.dispatcher data.disabled;
     _cleanUpEvents(el, t);
   };
 
@@ -421,6 +441,8 @@ export function trigger(elem, event, hash) {
   // Fetches element data and a reference to the parent (for bubbling).
   // Don't want to add a data object to cache for every parent,
   // so checking hasElData first.
+  // 获取元素数据和对父级的引用（用于冒泡）。
+  // 不想为每个父对象添加要缓存的数据对象，因此请先检查hasElData。
   const elemData = DomData.has(elem) ? DomData.get(elem) : {};
   const parent = elem.parentNode || elem.ownerDocument;
   // type = event.type || event,
@@ -443,10 +465,14 @@ export function trigger(elem, event, hash) {
 
   // Unless explicitly stopped or the event does not bubble (e.g. media events)
   // recursively calls this function to bubble the event up the DOM.
+  // 除非显式停止或事件不冒泡（例如，媒体事件）
+  // 否则递归调用此函数以使事件在DOM中冒泡
+  // 如此以来非 DOM 事件也会有冒泡的效果
   if (parent && !event.isPropagationStopped() && event.bubbles === true) {
     trigger.call(null, parent, event, hash);
 
   // If at the top of the DOM, triggers the default action unless disabled.
+  // 如果位于DOM的顶部，则触发默认操作，除非禁用
   } else if (!parent && !event.defaultPrevented && event.target && event.target[event.type]) {
     if (!DomData.has(event.target)) {
       DomData.set(event.target, {});

@@ -310,10 +310,12 @@ class Player extends Component {
     // which overrides globally set options.
     // This latter part coincides with the load order
     // (tag must exist before Player)
+    // 将传递的配置和标签上的配置进行合并，传递的配置优先级更高
     options = assign(Player.getTagSettings(tag), options);
 
     // Delay the initialization of children because we need to set up
     // player properties first, and can't use `this` before `super()`
+    // 延迟子组件的初始化，因为我们需要首先设置 player 属性，并且在调用 super 执行无法使用 this 关键字
     options.initChildren = false;
 
     // Same with creating the element
@@ -324,9 +326,11 @@ class Player extends Component {
 
     // we don't want the player to report touch activity on itself
     // see enableTouchActivity in Component
+    // 我们不想让播放器报告自己的触摸活动，请参阅组件中的enableToughActivity
     options.reportTouchActivity = false;
 
     // If language is not set, get the closest lang attribute
+    // 如果未设置语言，请获取最近的 lang 属性
     if (!options.language) {
       if (typeof tag.closest === 'function') {
         const closest = tag.closest('[lang]');
@@ -348,6 +352,7 @@ class Player extends Component {
     }
 
     // Run base component initializing with new options
+    // 没调用 super 之前拿不到 this，所以我们传递 null 进行在父级构造函数中处理
     super(null, options, ready);
 
     // Create bound methods for document listeners.
@@ -361,6 +366,7 @@ class Player extends Component {
     this.log = createLogger(this.id_);
 
     // Hold our own reference to fullscreen api so it can be mocked in tests
+    // 保留我们自己对全屏api的引用，以便可以在测试中模拟它
     this.fsApi_ = FullscreenApi;
 
     // Tracks when a tech changes the poster
@@ -368,6 +374,7 @@ class Player extends Component {
 
     // Holds callback info that gets queued when playback rate is zero
     // and a seek is happening
+    // 保存在播放速率为零且正在进行查找时排队的回调信息
     this.queuedCallbacks_ = [];
 
     // Turn off API access because we're loading a new tech that might load asynchronously
@@ -414,6 +421,7 @@ class Player extends Component {
       this.languages_ = Player.prototype.options_.languages;
     }
 
+    // 重置内部缓存对象
     this.resetCache_();
 
     // Set poster
@@ -425,6 +433,9 @@ class Player extends Component {
     // Original tag settings stored in options
     // now remove immediately so native controls don't flash.
     // May be turned back on by HTML5 tech if nativeControlsForTouch is true
+    // 选项中存储的原始标记设置
+    // 现在立即删除，这样本机控件就不会闪烁。
+    // 如果nativeControlsForTouch为真，则可能被HTML5技术重新打开
     tag.controls = false;
     tag.removeAttribute('controls');
 
@@ -433,15 +444,18 @@ class Player extends Component {
     this.playTerminatedQueue_ = [];
 
     // the attribute overrides the option
+    // 该属性将覆盖该选项
     if (tag.hasAttribute('autoplay')) {
       this.autoplay(true);
     } else {
       // otherwise use the setter to validate and
       // set the correct value.
+      // 否则，使用setter来验证和设置正确的值
       this.autoplay(this.options_.autoplay);
     }
 
     // check plugins
+    // only check
     if (options.plugins) {
       Object.keys(options.plugins).forEach((name) => {
         if (typeof this[name] !== 'function') {
@@ -467,6 +481,8 @@ class Player extends Component {
     // before a user can receive them so we can update isFullscreen appropriately.
     // make sure that we listen to fullscreenchange events before everything else to make sure that
     // our isFullscreen method is updated properly for internal components as well as external.
+    // 监听document和player fullscreenschange处理程序，以便在用户接收事件之前接收这些事件，以便我们可以适当地更新isFullscreen。
+    // 确保我们在做其他事情之前先听fullscreenchange事件，以确保我们的isFullscreen方法对内部组件和外部组件都进行了正确的更新。
     if (this.fsApi_.requestFullscreen) {
       Events.on(document, this.fsApi_.fullscreenchange, this.boundDocumentFullscreenChange_);
       this.on(this.fsApi_.fullscreenchange, this.boundDocumentFullscreenChange_);
@@ -482,6 +498,8 @@ class Player extends Component {
     const playerOptionsCopy = mergeOptions(this.options_);
 
     // Load plugins
+    // 这里给定的是插件的配置
+    // 插件的安装是在另外的接口上
     if (options.plugins) {
       Object.keys(options.plugins).forEach((name) => {
         this[name](options.plugins[name]);
@@ -504,6 +522,7 @@ class Player extends Component {
 
     // Update controls className. Can't do this when the controls are initially
     // set because the element doesn't exist yet.
+    // 更新控件类名。无法在控件初始设置时执行此操作，因为元素尚不存在
     if (this.controls()) {
       this.addClass('vjs-controls-enabled');
     } else {
@@ -530,6 +549,8 @@ class Player extends Component {
     // using events, since devices can have both touch and mouse events.
     // TODO: Make this check be performed again when the window switches between monitors
     // (See https://github.com/videojs/video.js/issues/5683)
+    // todo: 让它更聪明。使用事件在触摸/鼠标之间切换用户状态，因为设备可以同时具有触摸和鼠标事件。
+    // todo: 当窗口在监视器之间切换时，再次执行此检查
     if (browser.TOUCH_ENABLED) {
       this.addClass('vjs-touch-enabled');
     }
@@ -549,6 +570,8 @@ class Player extends Component {
 
     // When the player is first initialized, trigger activity so components
     // like the control bar show themselves if needed
+    // 当播放器首次初始化时，触发活动以便组件
+    // 就像控制栏如有需要，可以通过显示自己
     this.userActive(true);
     this.reportUserActivity();
 
@@ -640,10 +663,13 @@ class Player extends Component {
    * @return {Element}
    *         The DOM element that gets created.
    */
+  // el 最终是包裹层，tag 是视频元素
   createEl() {
     let tag = this.tag;
     let el;
+    // 如果父级包含 data-vjs-player 属性则是该父级，否则为空
     let playerElIngest = this.playerElIngest_ = tag.parentNode && tag.parentNode.hasAttribute && tag.parentNode.hasAttribute('data-vjs-player');
+    // 是否使用的 video-js 标签
     const divEmbed = this.tag.tagName.toLowerCase() === 'video-js';
 
     if (playerElIngest) {
@@ -656,6 +682,8 @@ class Player extends Component {
     // ID will now reference player box, not the video tag
     const attrs = Dom.getAttributes(tag);
 
+    // 如果用了自定义的标签则创建视频标签，并将其中的子元素转移
+    // 转义 controls src 等属性，同时确认有 video-js 作为 className
     if (divEmbed) {
       el = this.el_ = tag;
       tag = this.tag = document.createElement('video');
@@ -736,7 +764,10 @@ class Player extends Component {
     // Add a style element in the player that we'll use to set the width/height
     // of the player in a way that's still overrideable by CSS, just like the
     // video element
+    // 在播放器中添加一个style元素，
+    // 我们将使用这个元素来设置播放器的宽度/高度，这种方式仍然可以被CSS覆盖，就像video元素一样
     if (window.VIDEOJS_NO_DYNAMIC_STYLE !== true) {
+      // 创建一个 style 标签，并指定它的 className 属性
       this.styleEl_ = stylesheet.createStyleElement('vjs-styles-dimensions');
       const defaultsStyleEl = Dom.$('.vjs-styles-defaults');
       const head = Dom.$('head');
@@ -754,6 +785,7 @@ class Player extends Component {
     this.fluid(this.options_.fluid);
     this.aspectRatio(this.options_.aspectRatio);
     // support both crossOrigin and crossorigin to reduce confusion and issues around the name
+    // 同时支持crossOrigin和 crossorigin 以减少名称的混淆和问题
     this.crossOrigin(this.options_.crossOrigin || this.options_.crossorigin);
 
     // Hide any links within the video/audio tag,
@@ -769,6 +801,8 @@ class Player extends Component {
 
     // insertElFirst seems to cause the networkState to flicker from 3 to 2, so
     // keep track of the original for later so we can know if the source originally failed
+    // insertElFirst似乎会导致networkState从3闪烁到2，
+    // 因此请跟踪原始数据以便稍后我们可以知道源是否失败
     tag.initNetworkState_ = tag.networkState;
 
     // Wrap video tag in div (el/box) container
@@ -1000,6 +1034,7 @@ class Player extends Component {
    * @private
    * @listens Tech#loadedmetadata
    */
+  // 更新“Player”元素的样式（高度、宽度和纵横比）
   updateStyleEl_() {
     if (window.VIDEOJS_NO_DYNAMIC_STYLE === true) {
       const width = typeof this.width_ === 'number' ? this.width_ : this.options_.width;
@@ -1024,11 +1059,15 @@ class Player extends Component {
     let idClass;
 
     // The aspect ratio is either used directly or to calculate width and height.
+    // 纵横比可以直接使用，也可以用于计算宽度和高度。
     if (this.aspectRatio_ !== undefined && this.aspectRatio_ !== 'auto') {
       // Use any aspectRatio that's been specifically set
+      // 使用任何专门设置的aspectRatio
       aspectRatio = this.aspectRatio_;
     } else if (this.videoWidth() > 0) {
       // Otherwise try to get the aspect ratio from the video metadata
+      // 否则尝试从视频元数据中获取纵横比
+      // this.tech_.videoWidth()
       aspectRatio = this.videoWidth() + ':' + this.videoHeight();
     } else {
       // Or use a default. The video element's is 2:1, but 16:9 is more common.
@@ -1036,6 +1075,7 @@ class Player extends Component {
     }
 
     // Get the ratio as a decimal we can use to calculate dimensions
+    // 我们可以用十进制来计算尺寸
     const ratioParts = aspectRatio.split(':');
     const ratioMultiplier = ratioParts[1] / ratioParts[0];
 
@@ -1059,6 +1099,7 @@ class Player extends Component {
     }
 
     // Ensure the CSS class is valid by starting with an alpha character
+    // 确保CSS类以字母字符开头是有效的
     if ((/^[^a-zA-Z]/).test(this.id())) {
       idClass = 'dimensions-' + this.id();
     } else {
@@ -1066,6 +1107,7 @@ class Player extends Component {
     }
 
     // Ensure the right class is still on the player for the style element
+    // 确保style元素的播放器上仍然有正确的类
     this.addClass(idClass);
 
     stylesheet.setTextContent(this.styleEl_, `
@@ -1116,9 +1158,12 @@ class Player extends Component {
 
     // if autoplay is a string we pass false to the tech
     // because the player is going to handle autoplay on `loadstart`
+    // 如果自动播放是一个字符串，我们就把错误传给技术人员
+    // 因为player要处理“loadstart”上的自动播放`
     const autoplay = typeof this.autoplay() === 'string' ? false : this.autoplay();
 
     // Grab tech-specific options from player options and add source and parent element to use.
+    // 从player options抓取特定于技术的选项，并添加要使用的源元素和父元素。
     const techOptions = {
       source,
       autoplay,
@@ -1139,6 +1184,7 @@ class Player extends Component {
       'Promise': this.options_.Promise
     };
 
+    // [remoteText,remoteTextEl,audio,video,text]
     TRACK_TYPES.names.forEach((name) => {
       const props = TRACK_TYPES[name];
 
@@ -1407,6 +1453,8 @@ class Player extends Component {
    * part of any specification. Valid values and what they do can be
    * found on the autoplay getter at Player#autoplay()
    */
+  // 处理自动播放字符串值，而不是技术人员应该处理的典型布尔值。
+  // 请注意，这不是任何规范的一部分。有效值及其作用可以在Player#autoplay()的autoplay getter上找到
   manualAutoplay_(type) {
     if (!this.tech_ || typeof type !== 'string') {
       return;
@@ -1471,6 +1519,8 @@ class Player extends Component {
    * @param {Tech~SourceObject} srcObj
    *        A string or object source to update our caches to.
    */
+  // 更新内部源缓存，以便从“src（）”、“currentSource（）”和“currentSources（）”返回正确的源。
+  // 注意：如果传入的源存在于当前的“currentSources”缓存中，则不会更新“currentSources”。
   updateSourceCaches_(srcObj = '') {
 
     let src = srcObj;
@@ -1494,10 +1544,10 @@ class Player extends Component {
     // update `currentSource` cache always
     this.cache_.source = mergeOptions({}, srcObj, {src, type});
 
-    const matchingSources = this.cache_.sources.filter((s) => s.src && s.src === src);
-    const sourceElSources = [];
+    const matchingSources = this.cache_.sources.filter((s) => s.src && s.src === src); // 返回与传进来的 src 匹配的源
+    const sourceElSources = []; // 记录 source 元素上的源信息
     const sourceEls = this.$$('source');
-    const matchingSourceEls = [];
+    const matchingSourceEls = []; // 记录source 元素上和传进来的 src 相等的源地址
 
     for (let i = 0; i < sourceEls.length; i++) {
       const sourceObj = Dom.getAttributes(sourceEls[i]);
@@ -1511,10 +1561,12 @@ class Player extends Component {
 
     // if we have matching source els but not matching sources
     // the current source cache is not up to date
+    // 如果我们有匹配的源els但不匹配源，则当前源缓存不是最新的
     if (matchingSourceEls.length && !matchingSources.length) {
       this.cache_.sources = sourceElSources;
     // if we don't have matching source or source els set the
     // sources cache to the `currentSource` cache
+    // 如果没有匹配的源或源els，请将源缓存设置为“currentSource”缓存
     } else if (!matchingSources.length) {
       this.cache_.sources = [this.cache_.source];
     }
@@ -2050,11 +2102,14 @@ class Player extends Component {
   /**
    * when the document fschange event triggers it calls this
    */
+  // 当文档fschange事件触发时，它调用
   documentFullscreenChange_(e) {
     const targetPlayer = e.target.player;
 
     // if another player was fullscreen
     // do a null check for targetPlayer because older firefox's would put document as e.target
+    // 如果其他 player 全屏
+    // 对targetPlayer执行空检查，因为旧版的firefox会将文档作为e.target
     if (targetPlayer && targetPlayer !== this) {
       return;
     }
@@ -2187,6 +2242,7 @@ class Player extends Component {
    *
    * @private
    */
+  // 在播放器构造函数或reset方法之外使用此函数可能会产生意外的副作用
   resetCache_() {
     this.cache_ = {
 
@@ -2194,6 +2250,8 @@ class Player extends Component {
       // retrieved from the tech (see: currentTime). However, for completeness,
       // we set it to zero here to ensure that if we do start actually caching
       // it, we reset it along with everything else.
+      // 现在，currentTime并不是真正的缓存，因为它总是从tech检索的（参见：currentTime）。
+      // 但是，为了完整起见，我们在这里将其设置为零，以确保如果我们确实开始缓存它，我们会将它与其他所有内容一起重置。
       currentTime: 0,
       initTime: 0,
       inactivityTimeout: this.options_.inactivityTimeout,
@@ -2669,6 +2727,7 @@ class Player extends Component {
    *         - true if mute is on and getting
    *         - false if mute is off and getting
    */
+  // 获取当前静音状态，或打开或关闭静音
   muted(muted) {
     if (muted !== undefined) {
       this.techCall_('setMuted', muted);
@@ -2767,6 +2826,9 @@ class Player extends Component {
       // if we changed fullscreen state and we're in prefixed mode, trigger fullscreenchange
       // this is the only place where we trigger fullscreenchange events for older browsers
       // fullWindow mode is treated as a prefixed event and will get a fullscreenchange event as well
+      // 如果我们更改了全屏状态并且处于前缀模式，则触发全屏更改
+      // 这是我们为旧浏览器触发完整屏幕更改事件的唯一地方
+      // fullWindow模式被视为一个前缀事件，并将获得一个fullscreenchange事件
       if (this.isFullscreen_ !== oldValue && this.fsApi_.prefixed) {
         /**
            * @event Player#fullscreenchange
@@ -3088,6 +3150,8 @@ class Player extends Component {
    *
    * @listens keydown
    */
+  // 当此播放机具有焦点且某个键被按下时，或当该播放机的任何组件接收到它无法处理的按键时调用。
+  // 这允许播放器范围内的热键（可以定义如下，也可以通过外部函数选择）。
   handleKeyDown(event) {
     const {userActions} = this.options_;
 
@@ -3128,6 +3192,7 @@ class Player extends Component {
     };
 
     // Bail out if the user is focused on an interactive form element.
+    // 如果用户的注意力集中在交互式表单元素上，请退出。
     if (excludeElement(this.el_.ownerDocument.activeElement)) {
       return;
     }
@@ -3243,6 +3308,8 @@ class Player extends Component {
    * @return {Object|boolean}
    *         Object of source and tech order or false
    */
+  // 根据tech-order或来源顺序选择来源
+  // 如果`options.sourceOrder`是真的。否则，默认为tech-order选择
   selectSource(sources) {
     // Get only the techs specified in `techOrder` that exist and are supported by the
     // current platform
@@ -3291,6 +3358,7 @@ class Player extends Component {
 
     // Depending on the truthiness of `options.sourceOrder`, we swap the order of techs and sources
     // to select from them based on their priority.
+    // 取决于`sourceOrder选项`，我们交换tech和来sources的顺序，以便根据其优先级从中进行选择。
     if (this.options_.sourceOrder) {
       // Source-first ordering
       foundSourceAndTech = findFirstPassingTechSourcePair(sources, techs, flip(finder));
@@ -3317,6 +3385,7 @@ class Player extends Component {
    *         If the `source` argument is missing, returns the current source
    *         URL. Otherwise, returns nothing/undefined.
    */
+  // 获取或设置播放器的资源
   src(source) {
     // getter usage
     if (typeof source === 'undefined') {
@@ -3324,11 +3393,13 @@ class Player extends Component {
     }
     // filter out invalid sources and turn our source into
     // an array of source objects
+    // 过滤掉无效的源代码，并将我们的源代码转换为源对象的数组
     const sources = filterSource(source);
 
     // if a source was passed in then it is invalid because
     // it was filtered to a zero length Array. So we have to
     // show an error
+    // 如果传入了一个源，而它是无效的，因为它被筛选后得到长度为零的数组。所以我们必须显示一个错误
     if (!sources.length) {
       this.setTimeout(function() {
         this.error({ code: 4, message: this.localize(this.options_.notSupportedMessage) });
@@ -3343,17 +3414,21 @@ class Player extends Component {
     this.updateSourceCaches_(sources[0]);
 
     // middlewareSource is the source after it has been changed by middleware
+    // middlewareSource是中间件更改后的源
     middleware.setSource(this, sources[0], (middlewareSource, mws) => {
       this.middleware_ = mws;
 
       // since sourceSet is async we have to update the cache again after we select a source since
       // the source that is selected could be out of order from the cache update above this callback.
+      // 由于sourceSet是异步的，因此在选择源之后，我们必须再次更新缓存
+      // 选定的源可能与此回调上方的缓存更新顺序不一致
       this.cache_.sources = sources;
       this.updateSourceCaches_(middlewareSource);
 
       const err = this.src_(middlewareSource);
 
       if (err) {
+        // 如果找不到支持的技术就继续尝试后面的资源
         if (sources.length > 1) {
           return this.src(sources.slice(1));
         }
@@ -3367,6 +3442,7 @@ class Player extends Component {
 
         // we could not find an appropriate tech, but let's still notify the delegate that this is it
         // this needs a better comment about why this is needed
+        // 我们找不到合适的技术，但还是让我们通知学员，这就是他需要更好地解释为什么需要这样做
         this.triggerReady();
 
         return;
@@ -3389,6 +3465,7 @@ class Player extends Component {
    *
    * @private
    */
+  // 在tech上设置source对象，返回一个boolean值，指示是否有一个tech可以播放该源
   src_(source) {
     const sourceTech = this.selectSource([source]);
 
@@ -3399,6 +3476,7 @@ class Player extends Component {
     if (!titleCaseEquals(sourceTech.tech, this.techName_)) {
       this.changingSrc_ = true;
       // load this technology with the chosen source
+      // 使用所选源加载此技术
       this.loadTech_(sourceTech.tech, sourceTech.source);
       this.tech_.ready(() => {
         this.changingSrc_ = false;
@@ -3408,12 +3486,18 @@ class Player extends Component {
 
     // wait until the tech is ready to set the source
     // and set it synchronously if possible (#2326)
+    // 等到tech准备好设置信号源
+    // 如果可能，同步设置（#2326）
     this.ready(function() {
 
       // The setSource tech method was added with source handlers
       // so older techs won't support it
       // We need to check the direct prototype for the case where subclasses
       // of the tech do not support source handlers
+      // setSource tech方法添加了源处理程序
+      // 所以老技术不会支持它
+      // 我们需要检查子类的直接原型
+      // 不支持源处理程序
       if (this.tech_.constructor.prototype.hasOwnProperty('setSource')) {
         this.techCall_('setSource', source);
       } else {
@@ -3593,6 +3677,8 @@ class Player extends Component {
    * @return {boolean|string}
    *         The current value of autoplay when getting
    */
+  // 获取或设置自动播放选项。当这是一个布尔值时，它将修改技术上的属性。
+  // 当这是一个字符串时，技术上的属性将被删除，并且“Player”将处理加载启动时的自动播放。
   autoplay(value) {
     // getter usage
     if (value === undefined) {
@@ -3602,6 +3688,7 @@ class Player extends Component {
     let techAutoplay;
 
     // if the value is a valid string set it to that
+    // 如果值是有效字符串，则将其设置为
     if (typeof value === 'string' && (/(any|play|muted)/).test(value)) {
       this.options_.autoplay = value;
       this.manualAutoplay_(value);
@@ -3991,6 +4078,7 @@ class Player extends Component {
    *
    * @private
    */
+  // 根据超时值侦听用户活动
   listenForUserActivity_() {
     let mouseInProgress;
     let lastMoveX;
@@ -4035,6 +4123,7 @@ class Player extends Component {
 
     // Fixes bug on Android & iOS where when tapping progressBar (when control bar is displayed)
     // controlBar would no longer be hidden by default timeout.
+    // 修正了Android&iOS上的错误，当点击progressBar（当显示控制栏时）controlBar在默认超时下不再隐藏。
     if (controlBar && !browser.IS_IOS && !browser.IS_ANDROID) {
 
       controlBar.on('mouseenter', function(event) {
@@ -4682,6 +4771,8 @@ class Player extends Component {
     return mergeOptions(this.cache_.media);
   }
 
+  // 从元素标签上获取配置，并且将 data-setup 的值通过 JSON.parse 解析后最后都会合并到 baseOptions 中
+  // 同时会获取子元素下 source 和 track 元素下的属性配置置于 baseOptions 的 sources 和 tracks 字段中
   /**
    * Gets tag settings
    *
@@ -4905,8 +4996,9 @@ Player.prototype.options_ = {
   liveui: false,
 
   // Included control sets
+  // 播放器默认子级组件
   children: [
-    'mediaLoader',
+    'mediaLoader', // 媒体加载器
     'posterImage',
     'textTrackDisplay',
     'loadingSpinner',

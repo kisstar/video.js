@@ -12,6 +12,7 @@ import mergeOptions from '../utils/merge-options.js';
  *
  * @extends Component
  */
+// “MediaLoader”是决定加载哪种播放技术的“组件”
 class MediaLoader extends Component {
 
   /**
@@ -34,6 +35,8 @@ class MediaLoader extends Component {
 
     // If there are no sources when the player is initialized,
     // load the first supported playback technology.
+    // 如果播放器初始化时没有任何源，
+    // 加载浏览器第一个支持的播放技术。
 
     if (!options.playerOptions.sources || options.playerOptions.sources.length === 0) {
       for (let i = 0, j = options.playerOptions.techOrder; i < j.length; i++) {
@@ -42,6 +45,8 @@ class MediaLoader extends Component {
 
         // Support old behavior of techs being registered as components.
         // Remove once that deprecated behavior is removed.
+        // 支持 techs 注册为组件的旧行为。
+        // 一旦不推荐的行为被删除，就删除。
         if (!techName) {
           tech = Component.getComponent(techName);
         }
@@ -57,6 +62,10 @@ class MediaLoader extends Component {
       // Then load the best source.
       // A few assumptions here:
       //   All playback technologies respect preload false.
+      // 循环播放技术（HTML5，Flash）并检查支持。
+      // 然后加载最佳源。
+      // 这里有几个假设：
+      // 所有播放技术都尊重预加载错误。
       player.src(options.playerOptions.sources);
     }
   }

@@ -102,6 +102,9 @@ const StatefulMixin = {
  * @return {Object}
  *          Returns the `target`.
  */
+
+// 如果目标对象是{evented}并且有一个“handleStateChanged”方法，
+// 则该方法将自动绑定到其自身上的“statechanged”事件
 function stateful(target, defaultState) {
   Obj.assign(target, StatefulMixin);
 
